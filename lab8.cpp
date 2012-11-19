@@ -84,6 +84,7 @@ int main(int argc, char *argv[])
 	}
 	printf("\n");
 	
+	RSAPUB;
 
 	BIO_free_all(boutfile);
 	BIO_free_all(hash);
@@ -98,7 +99,7 @@ int main(int argc, char *argv[])
 	//*/
 	return 0;
 }
-
+	
 
 //This function offers an example of chaining a DES cipher to a base 64 encoder
 //  to a buffer to a file, using BIOs. Taken almost directly from the example code
