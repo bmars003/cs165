@@ -35,6 +35,7 @@ string buff2hex(const unsigned char* buff, const int len)
 }
 /*
 void SSL_write(){
+
 }
 
 void SSL_read(){

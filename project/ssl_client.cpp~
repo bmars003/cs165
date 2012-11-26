@@ -99,7 +99,6 @@ int main(int argc, char** argv)
 	char buff[BUFFER_SIZE];
 	memset(buff,0,sizeof(buff));
 	*/
-	int sent = SSL_write(ssl,(const void*) randomNumber.c_str(),sizeof(randomNumber));
     
     printf("SUCCESS.\n");
 	printf("    (Challenge sent: \"%s\")\n", randomNumber.c_str());
