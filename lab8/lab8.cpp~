@@ -99,14 +99,14 @@ int main(int argc, char *argv[])
 	BIO_free_all(boutfile);
 	BIO_free_all(hash);
 	//Print error messages
-	///*
+	/*
 	char buf[256];
 	int err;
 	while ((err = ERR_get_error()) != 0) {
 	ERR_error_string_n(err, buf, sizeof(buf));
 	printf("*** %s\n", buf);
 	}
-	//*/
+	*/
 	return 0;
 }
 	
