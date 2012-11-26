@@ -87,7 +87,8 @@ int main(int argc, char *argv[])
 	char buff_to_2 [EVP_MAX_MD_SIZE];
 	rsa_public = BIO_new_file("rsapublickey.pem","r");
 	RSAPUB = PEM_read_bio_RSA_PUBKEY(rsa_public,NULL,NULL,NULL);
-	int rsa_public_dec = RSA_public_decrypt(EVP_MAX_MD_SIZE,(unsigned char*)buff_to,(unsigned char*)buff_to_2,RSAPUB,RSA_PKCS1_PADDING); 
+	// have to use the size of the private encyrpt digest.
+	int rsa_public_dec = RSA_public_decrypt(rsa_private_enc,(unsigned char*)buff_to,(unsigned char*)buff_to_2,RSAPUB,RSA_PKCS1_PADDING); 
 	cout << "Hash decrypted with private key:";
 	for(int i = 0; i < mdlen; i++)
 	{
