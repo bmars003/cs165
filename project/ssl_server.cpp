@@ -162,7 +162,7 @@ int main(int argc, char** argv)
   int siglen=0;
   char* signature="FIXME";
   //string signature = "FIXME" 
- /*
+  ///*
   BIO *rsa_private;
   RSA * RSAPRIV;
  
@@ -171,13 +171,17 @@ int main(int argc, char** argv)
 
   rsa_private = BIO_new_file("rsaprivatekey.pem","r");
   RSAPRIV = PEM_read_bio_RSAPrivateKey(rsa_private,NULL,NULL,NULL);
-
-  int rsa_private_enc = RSA_private_encrypt(BUFFER_SIZE,(unsigned char*)mdbuf,(unsigned char*)buff_to,RSAPRIV,RSA_PKCS1_PADDING);
+  //was too big so using a smaller version
+  //int rsa_private_enc = RSA_private_encrypt(BUFFER_SIZE,(unsigned char*)mdbuf,(unsigned char*)buff_to,RSAPRIV,RSA_PKCS1_PADDING);
  
+int rsa_private_enc = RSA_private_encrypt(EVP_MAX_MD_SIZE,(unsigned char*)mdbuf,(unsigned char*)buff_to,RSAPRIV,RSA_PKCS1_PADDING);
+
+ //print_errors();
+
   signature = buff_to;
-  cout << "RSAed:"  << buff_to << endl;
+  //cout << "RSAed:"  << buff_to << "<SIZE>:" <<  rsa_private_enc << endl << "SIZE of EVp:" << EVP_MAX_MD_SIZE <<endl;
   siglen = rsa_private_enc; 
-  */
+  //*/
   printf("DONE.\n");
   printf("    (Signed key length: %d bytes)\n", siglen);
   printf("    (Signature: \"%s\" (%d bytes))\n", buff2hex((const unsigned char*)signature, siglen).c_str(), siglen);
