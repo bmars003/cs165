@@ -108,7 +108,7 @@ int main(int argc, char** argv)
   memset(buff,0,sizeof(buff));
   buff_len = SSL_read(ssl,buff,BUFFER_SIZE);    
   challenge = buff;
-  
+  //cout << "LENGTH OF SSL_READ(server):" << buff_len <<endl; 
   printf("DONE.\n");
   printf("    (Challenge: \"%s\")\n", challenge.c_str());
   
@@ -173,14 +173,14 @@ int main(int argc, char** argv)
   RSAPRIV = PEM_read_bio_RSAPrivateKey(rsa_private,NULL,NULL,NULL);
   //was too big so using a smaller version
   //int rsa_private_enc = RSA_private_encrypt(BUFFER_SIZE,(unsigned char*)mdbuf,(unsigned char*)buff_to,RSAPRIV,RSA_PKCS1_PADDING);
- 
+  //cout << "SIZE of EVp:" << EVP_MAX_MD_SIZE <<endl;  
 int rsa_private_enc = RSA_private_encrypt(EVP_MAX_MD_SIZE,(unsigned char*)mdbuf,(unsigned char*)buff_to,RSAPRIV,RSA_PKCS1_PADDING);
-
- //print_errors();
+ print_errors();
 
   signature = buff_to;
   //cout << "RSAed:"  << buff_to << "<SIZE>:" <<  rsa_private_enc << endl << "SIZE of EVp:" << EVP_MAX_MD_SIZE <<endl;
-  siglen = rsa_private_enc; 
+  //cout << "SIZE of EVp2:" << EVP_MAX_MD_SIZE <<endl;  
+siglen = rsa_private_enc; 
   //*/
   printf("DONE.\n");
   printf("    (Signed key length: %d bytes)\n", siglen);
@@ -191,8 +191,12 @@ int rsa_private_enc = RSA_private_encrypt(EVP_MAX_MD_SIZE,(unsigned char*)mdbuf,
   printf("5. Sending signature to client for authentication...");
   
   //BIO_flush
+  int flush_bout = BIO_flush(boutfile);
+  int flush_hash = BIO_flush(hash);
+  int flush_rsa = BIO_flush(rsa_private);
   //SSL_write
-  
+  int sent_signiture = SSL_write(ssl,(const void*) buff_to,sizeof(buff_to));
+  cout << endl << "SENT(sig to client)<"<<sent_signiture <<">" <<endl;
   printf("DONE.\n");
   
   //-------------------------------------------------------------------------

@@ -1,10 +1,7 @@
 COMPILER	= g++
 FLAGS	 	= 
 LIBRARIES	= -l ssl -l crypto
-#CXXFLAGS=-g -W -Wall -Werror -ansi -pedantic
 
 all: ssl_server.cpp ssl_client.cpp
 	$(COMPILER) $(FLAGS) -o server ssl_server.cpp $(LIBRARIES)
 	$(COMPILER) $(FLAGS) -o client ssl_client.cpp $(LIBRARIES)
-clean:
-	rm -rf *.o a.out *~ *#

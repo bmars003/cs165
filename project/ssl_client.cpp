@@ -114,19 +114,30 @@ int main(int argc, char** argv)
   int len=5;
   //SSL_read;
   /*
-  string getHash = "";
+  string getsig = "";
   int buff_len = 0;
   {
   char buffer[BUFFER_SIZE];
-  memset(buff,0,sizeof(buffer));
+  memset(buffer,0,sizeof(buffer));
   //buff_len = SSL_read(ssl,buffer,BUFFER_SIZE);    
-  getHash = buffer;
+  getsig= buffer;
   }
   //buff = (char*) getHash.c_str();
   */
+  ///*
+  {
+   // BUFFER_SIZE vs. EVP_MAX_MD_SIZE
+  char buffer[BUFFER_SIZE];
+ cout << "SIZE of EVp:" << EVP_MAX_MD_SIZE <<endl;
+  memset(buffer,0,sizeof(buffer));
+  len = SSL_read(ssl,buffer,BUFFER_SIZE);    
+  buff= buffer;
+  cout << "LENGTH OF SSL_READ:" << len <<endl; 
+  }
+  //*/
   printf("RECEIVED.\n");
   printf("    (Signature: \"%s\" (%d bytes))\n", buff2hex((const unsigned char*)buff, len).c_str(), len);
-  
+  //printf("    (Signature: \"%s\" (%d bytes))\n", buff2hex((const unsigned char*)get_sig, buff_len).c_str(), buff_len);
   //-------------------------------------------------------------------------
   // 3b. Authenticate the signed key
   printf("3b. Authenticating key...");
