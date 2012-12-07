@@ -108,6 +108,7 @@ int main(int argc, char** argv)
   memset(buff,0,sizeof(buff));
   buff_len = SSL_read(ssl,buff,BUFFER_SIZE);    
   challenge = buff;
+  cout << endl<< buff << endl;
   //cout << "LENGTH OF SSL_READ(server):" << buff_len <<endl; 
   printf("DONE.\n");
   printf("    (Challenge: \"%s\")\n", challenge.c_str());
@@ -122,31 +123,20 @@ int main(int argc, char** argv)
   //BIO_set_md;
   //BIO_push;
   //BIO_gets;
+
  int mdlen=0;
  string hash_string = ""; 
- /*
-  BIO *hash,*binfile,*boutfile;
-  binfile =  BIO_new(BIO_s_mem());
-  boutfile = BIO_new(BIO_s_mem());
-  int actualWritten = BIO_write(boutfile,buff,buff_len); 
-  hash = BIO_new(BIO_f_md());
-  BIO_set_md(hash,EVP_sha1());
-  //BIO_push(hash,binfile);
-  BIO_push(hash,boutfile); 
-  */
-  BIO *hash,*binfile,*boutfile;
-  binfile =  BIO_new(BIO_s_mem());
-  boutfile = BIO_new(BIO_s_mem());
-  int actualWritten = BIO_write(boutfile,buff,buff_len); 
-  hash = BIO_new(BIO_f_md());
-  BIO_set_md(hash,EVP_sha1());
-  //BIO_push(hash,binfile);
-  BIO_push(hash,boutfile); 
-  
-  char mdbuf[BUFFER_SIZE];
-  memset(buff,0,sizeof(buff));
-  mdlen = BIO_gets(hash,mdbuf,BUFFER_SIZE);
-  hash_string =  buff2hex((const unsigned char*)mdbuf,mdlen);
+ 
+ BIO *hash,*boutfile;
+ boutfile = BIO_new(BIO_s_mem());
+ hash = BIO_new(BIO_f_md());
+ BIO_set_md(hash,EVP_sha1());
+ int actualWritten = BIO_write(boutfile,buff,buff_len);  
+ BIO_push(hash,boutfile); 
+ char mdbuf[BUFFER_SIZE];
+ memset(mdbuf,0,sizeof(mdbuf));
+ mdlen = BIO_read(hash,mdbuf,BUFFER_SIZE);
+ hash_string =  buff2hex((const unsigned char*)mdbuf,mdlen);
 
   printf("SUCCESS.\n");
   printf("    (SHA1 hash: \"%s\" (%d bytes))\n", hash_string.c_str(), mdlen);
@@ -160,43 +150,59 @@ int main(int argc, char** argv)
   //RSA_private_encrypt
   
   int siglen=0;
-  char* signature="FIXME";
-  //string signature = "FIXME" 
+  //char* signature="FIXME";
+  string signature = "FIXME"; 
   ///*
   BIO *rsa_private;
   RSA * RSAPRIV;
- 
-  char buff_to[BUFFER_SIZE];
-  memset(buff,0,sizeof(buff));
-
-  rsa_private = BIO_new_file("rsaprivatekey.pem","r");
-  RSAPRIV = PEM_read_bio_RSAPrivateKey(rsa_private,NULL,NULL,NULL);
-  //was too big so using a smaller version
-  //int rsa_private_enc = RSA_private_encrypt(BUFFER_SIZE,(unsigned char*)mdbuf,(unsigned char*)buff_to,RSAPRIV,RSA_PKCS1_PADDING);
-  //cout << "SIZE of EVp:" << EVP_MAX_MD_SIZE <<endl;  
-int rsa_private_enc = RSA_private_encrypt(EVP_MAX_MD_SIZE,(unsigned char*)mdbuf,(unsigned char*)buff_to,RSAPRIV,RSA_PKCS1_PADDING);
- print_errors();
-
-  signature = buff_to;
-  //cout << "RSAed:"  << buff_to << "<SIZE>:" <<  rsa_private_enc << endl << "SIZE of EVp:" << EVP_MAX_MD_SIZE <<endl;
-  //cout << "SIZE of EVp2:" << EVP_MAX_MD_SIZE <<endl;  
-siglen = rsa_private_enc; 
-  //*/
+  {
+    char rsa_enc_buff[BUFFER_SIZE];
+    rsa_private = BIO_new_file("rsaprivatekey.pem","r");
+    RSAPRIV = PEM_read_bio_RSAPrivateKey(rsa_private,NULL,NULL,NULL);
+    int rsa_private_enc = RSA_private_encrypt(mdlen,(unsigned char*)mdbuf,(unsigned char*)rsa_enc_buff,RSAPRIV,RSA_PKCS1_PADDING);
+    siglen = rsa_private_enc;
+    signature = rsa_enc_buff;
+    print_errors();
+  }
   printf("DONE.\n");
   printf("    (Signed key length: %d bytes)\n", siglen);
-  printf("    (Signature: \"%s\" (%d bytes))\n", buff2hex((const unsigned char*)signature, siglen).c_str(), siglen);
+  printf("    (Signature: \"%s\" (%d bytes))\n", buff2hex((const unsigned char*)signature.c_str(), siglen).c_str(), siglen);
   
   //-------------------------------------------------------------------------
   // 5. Send the signature to the client for authentication
   printf("5. Sending signature to client for authentication...");
-  
-  //BIO_flush
+ 
+//BIO_flush
   int flush_bout = BIO_flush(boutfile);
   int flush_hash = BIO_flush(hash);
   int flush_rsa = BIO_flush(rsa_private);
   //SSL_write
-  int sent_signiture = SSL_write(ssl,(const void*) buff_to,sizeof(buff_to));
+  int sent_signiture = SSL_write(ssl,(const void*) signature.c_str(),siglen);
+  
   cout << endl << "SENT(sig to client)<"<<sent_signiture <<">" <<endl;
+  
+    /*  
+  //checking signature on server side an seeing if I can decrypt
+  {  
+    cout << "CHECKING signature on server side to see if it can"
+	 << " decrypted" << endl;
+    BIO *rsa_public;
+    RSA *RSAPUB;
+    char rsa_dec_buff[BUFFER_SIZE];
+    rsa_public = BIO_new_file("rsapublickey.pem","r");
+    RSAPUB = PEM_read_bio_RSA_PUBKEY(rsa_public,NULL,NULL,NULL);
+    int rsa_public_dec = RSA_public_decrypt(siglen,(unsigned char*)signature,(unsigned char*)rsa_dec_buff,RSAPUB,RSA_PKCS1_PADDING);
+     print_errors();
+    cout << endl;
+    printf("    (Decrypted key length: %d bytes)\n", rsa_public_dec);
+    printf("    (Decrypted key: \"%s\" (%d bytes))\n", buff2hex((const unsigned char*)rsa_dec_buff, rsa_public_dec).c_str(), rsa_public_dec);
+    flush_bout = BIO_flush(boutfile);
+    flush_hash = BIO_flush(hash);
+    flush_rsa = BIO_flush(rsa_private);
+    int flush_rsa_dec = BIO_flush(rsa_public);
+  }
+  */
+
   printf("DONE.\n");
   
   //-------------------------------------------------------------------------
@@ -206,6 +212,10 @@ siglen = rsa_private_enc;
   //SSL_read
   char file[BUFFER_SIZE];
   memset(file,0,sizeof(file));
+  int file_len = 0;
+  {
+    //file_len = SSL_read(ssl,file,BUFFER_SIZE);    
+  }
   printf("RECEIVED.\n");
   printf("    (File requested: \"%s\"\n", file);
   

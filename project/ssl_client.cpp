@@ -95,6 +95,7 @@ int main(int argc, char** argv)
   printf("2.  Sending challenge to the server...");
   
   string randomNumber="31337";
+  //string randomNumber="31333333";
   //SSL_write
   /*
     int buff_len = 0;
@@ -110,34 +111,21 @@ int main(int argc, char** argv)
   // 3a. Receive the signed key from the server
   printf("3a. Receiving signed key from server...");
   
-  char* buff="FIXME";
-  int len=5;
+  //char* signature="FIXME";
+  string signature ="FIXME";
+  int siglen = 5;
   //SSL_read;
-  /*
-  string getsig = "";
-  int buff_len = 0;
   {
-  char buffer[BUFFER_SIZE];
-  memset(buffer,0,sizeof(buffer));
-  //buff_len = SSL_read(ssl,buffer,BUFFER_SIZE);    
-  getsig= buffer;
-  }
-  //buff = (char*) getHash.c_str();
-  */
-  ///*
-  {
-   // BUFFER_SIZE vs. EVP_MAX_MD_SIZE
-  char buffer[BUFFER_SIZE];
- cout << "SIZE of EVp:" << EVP_MAX_MD_SIZE <<endl;
-  memset(buffer,0,sizeof(buffer));
-  len = SSL_read(ssl,buffer,BUFFER_SIZE);    
-  buff= buffer;
-  cout << "LENGTH OF SSL_READ:" << len <<endl; 
+     char rsa_enc_buff[BUFFER_SIZE];
+     memset(rsa_enc_buff,0,sizeof(rsa_enc_buff));
+     int rsa_private_enc = SSL_read(ssl,rsa_enc_buff,BUFFER_SIZE);
+     signature = rsa_enc_buff;
+     siglen = rsa_private_enc;
+     
   }
   //*/
   printf("RECEIVED.\n");
-  printf("    (Signature: \"%s\" (%d bytes))\n", buff2hex((const unsigned char*)buff, len).c_str(), len);
-  //printf("    (Signature: \"%s\" (%d bytes))\n", buff2hex((const unsigned char*)get_sig, buff_len).c_str(), buff_len);
+  printf("    (Signature: \"%s\" (%d bytes))\n", buff2hex((const unsigned char*)signature.c_str(), siglen).c_str(), siglen);
   //-------------------------------------------------------------------------
   // 3b. Authenticate the signed key
   printf("3b. Authenticating key...");
@@ -150,11 +138,49 @@ int main(int argc, char** argv)
   //BIO_free
   
   string generated_key="";
+  int generated_length = 0;
   string decrypted_key="";
-  
+  int decrypted_length = 0;
+ 
+   
+  {
+    BIO *hash, *boutfile;
+    
+    // /*
+    //generating hash
+    boutfile = BIO_new(BIO_s_mem());
+    hash = BIO_new(BIO_f_md());
+    BIO_set_md(hash,EVP_sha1());
+    int actualWritten = BIO_write(boutfile,(const void*) randomNumber.c_str(),sizeof(randomNumber));
+    BIO_push(hash,boutfile);
+    char mdbuf[BUFFER_SIZE];
+    memset(mdbuf,0,sizeof(mdbuf));
+    int mdlen = BIO_read(hash,mdbuf,BUFFER_SIZE);
+    generated_key = buff2hex((const unsigned char*)mdbuf,mdlen);
+    generated_length = mdlen;
+    int hash_flush = BIO_flush(hash);
+    int boutfile_flush = BIO_flush(boutfile);
+    print_errors();
+    // */
+  }
+  //  /*
+  {
+    BIO  *rsa_public;
+    RSA *RSAPUB;
+    //decrypting signature given
+    char rsa_dec_buff[BUFFER_SIZE];
+   rsa_public = BIO_new_file("rsapublickey.pem","r");
+   RSAPUB = PEM_read_bio_RSA_PUBKEY(rsa_public,NULL,NULL,NULL);
+   int rsa_public_dec = RSA_public_decrypt(siglen,(unsigned char*)signature.c_str(),(unsigned char*)rsa_dec_buff,RSAPUB,RSA_PKCS1_PADDING);
+   print_errors();
+   decrypted_key = buff2hex((const unsigned char*) rsa_dec_buff,rsa_public_dec);
+   decrypted_length = rsa_public_dec;
+   int rsa_public_flush = BIO_flush(rsa_public);
+ }
+  //  */
   printf("AUTHENTICATED\n");
-  printf("    (Generated key: %s)\n", generated_key.c_str());
-  printf("    (Decrypted key: %s)\n", decrypted_key.c_str());
+  printf("    (Generated key(SHA1 hash): %s\" (%d bytes))\n", generated_key.c_str(),generated_length);
+  printf("    (Decrypted key(SHA1 hash): %s\" (%d bytes))\n", decrypted_key.c_str(),decrypted_length);
   
   //-------------------------------------------------------------------------
   // 4. Send the server a file request
