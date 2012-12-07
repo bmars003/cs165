@@ -97,11 +97,6 @@ int main(int argc, char** argv)
   string randomNumber="31337";
   //string randomNumber="31333333";
   //SSL_write
-  /*
-    int buff_len = 0;
-    char buff[BUFFER_SIZE];
-    memset(buff,0,sizeof(buff));
-  */
   int sent = SSL_write(ssl,(const void*) randomNumber.c_str(),sizeof(randomNumber));
   
   printf("SUCCESS.\n");
@@ -110,8 +105,7 @@ int main(int argc, char** argv)
   //-------------------------------------------------------------------------
   // 3a. Receive the signed key from the server
   printf("3a. Receiving signed key from server...");
-  
-  //char* signature="FIXME";
+
   string signature ="FIXME";
   int siglen = 5;
   //SSL_read;
@@ -123,7 +117,6 @@ int main(int argc, char** argv)
      siglen = rsa_private_enc;
      
   }
-  //*/
   printf("RECEIVED.\n");
   printf("    (Signature: \"%s\" (%d bytes))\n", buff2hex((const unsigned char*)signature.c_str(), siglen).c_str(), siglen);
   //-------------------------------------------------------------------------
@@ -142,11 +135,8 @@ int main(int argc, char** argv)
   string decrypted_key="";
   int decrypted_length = 0;
  
-   
   {
     BIO *hash, *boutfile;
-    
-    // /*
     //generating hash
     boutfile = BIO_new(BIO_s_mem());
     hash = BIO_new(BIO_f_md());
@@ -161,9 +151,8 @@ int main(int argc, char** argv)
     int hash_flush = BIO_flush(hash);
     int boutfile_flush = BIO_flush(boutfile);
     print_errors();
-    // */
   }
-  //  /*
+  
   {
     BIO  *rsa_public;
     RSA *RSAPUB;
@@ -177,11 +166,23 @@ int main(int argc, char** argv)
    decrypted_length = rsa_public_dec;
    int rsa_public_flush = BIO_flush(rsa_public);
  }
-  //  */
+  
   printf("AUTHENTICATED\n");
   printf("    (Generated key(SHA1 hash): %s\" (%d bytes))\n", generated_key.c_str(),generated_length);
   printf("    (Decrypted key(SHA1 hash): %s\" (%d bytes))\n", decrypted_key.c_str(),decrypted_length);
-  
+  if(generated_key != decrypted_key){
+    cerr << "Generated key is not the same as the Decrypted key." 
+	 << endl
+	 << "Authentication failure between client and server."
+	 << endl << "Exiting with error code -1";
+    exit(-1);
+  }
+  else
+    cout << "Genratred key matches Decrypted key." 
+	 << endl
+	 << "Authentication is a success proceeding with further "
+	 << "request(s)." << endl;
+
   //-------------------------------------------------------------------------
   // 4. Send the server a file request
   printf("4.  Sending file request to server...");
@@ -191,8 +192,22 @@ int main(int argc, char** argv)
   //BIO_puts
   //SSL_write
   
+  //BIO_flush in part 3b so not needed here
+  int file_request = 0;
+  //int file_request = SSL_write(ssl,(const void*)filename,sizeof(filename)+1);
+  BIO *request;
+  request = BIO_new(BIO_s_mem());
+  char filename_to_send[BUFFER_SIZE];
+  memset(filename_to_send,0,sizeof(filename_to_send));
+  int puts = BIO_puts(request,(const char*)filename);
+  int pushed_to_request = BIO_read(request,filename_to_send,puts);
+  //cout << "?" <<filename_to_send <<"?"<< endl;
+  file_request = SSL_write(ssl,(const void*) filename_to_send,
+			   pushed_to_request);
+ print_errors();
   printf("SENT.\n");
-  printf("    (File requested: \"%s\")\n", filename);
+  printf("    (File requested: \"%s\" (%d bytes))\n", 
+	 filename,file_request);
   
   //-------------------------------------------------------------------------
   // 5. Receives and displays the contents of the file requested

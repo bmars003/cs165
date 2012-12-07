@@ -109,7 +109,6 @@ int main(int argc, char** argv)
   buff_len = SSL_read(ssl,buff,BUFFER_SIZE);    
   challenge = buff;
   cout << endl<< buff << endl;
-  //cout << "LENGTH OF SSL_READ(server):" << buff_len <<endl; 
   printf("DONE.\n");
   printf("    (Challenge: \"%s\")\n", challenge.c_str());
   
@@ -150,9 +149,7 @@ int main(int argc, char** argv)
   //RSA_private_encrypt
   
   int siglen=0;
-  //char* signature="FIXME";
   string signature = "FIXME"; 
-  ///*
   BIO *rsa_private;
   RSA * RSAPRIV;
   {
@@ -179,7 +176,7 @@ int main(int argc, char** argv)
   //SSL_write
   int sent_signiture = SSL_write(ssl,(const void*) signature.c_str(),siglen);
   
-  cout << endl << "SENT(sig to client)<"<<sent_signiture <<">" <<endl;
+  // cout << endl << "SENT(sig to client)<"<<sent_signiture <<">" <<endl;
   
     /*  
   //checking signature on server side an seeing if I can decrypt
@@ -214,10 +211,10 @@ int main(int argc, char** argv)
   memset(file,0,sizeof(file));
   int file_len = 0;
   {
-    //file_len = SSL_read(ssl,file,BUFFER_SIZE);    
+    file_len = SSL_read(ssl,file,BUFFER_SIZE);    
   }
   printf("RECEIVED.\n");
-  printf("    (File requested: \"%s\"\n", file);
+  printf("    (File requested: \"%s\" (%d bytes))\n", file,file_len);
   
   //-------------------------------------------------------------------------
   // 7. Send the requested file back to the client (if it exists)

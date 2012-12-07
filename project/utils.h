@@ -1,5 +1,7 @@
 // Macro definitions
 #define BUFFER_SIZE 1024
+#define RSA_MAX 256
+#define RSA_DEFAULT 128
 #define PAUSE(X) for(uint now=time(NULL); time(NULL) != now+X;) {}
 
 //----------------------------------------------------------------------------
@@ -33,11 +35,3 @@ string buff2hex(const unsigned char* buff, const int len)
     }
     return s;
 }
-/*
-void SSL_write(){
-}
-
-void SSL_read(){
-
-}
-*/
