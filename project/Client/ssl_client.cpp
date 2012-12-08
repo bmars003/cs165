@@ -215,7 +215,7 @@ string randomNumber="31337";
   //flush BIO request
   int flush_request = BIO_flush(request);
   
- print_errors();
+  print_errors();
   printf("SENT.\n");
   printf("    (File requested: \"%s\" (%d bytes))\n", 
 	 filename,file_request);
@@ -256,14 +256,19 @@ string randomNumber="31337";
 	    bytesReceived += actualRead;
 	    //print what was read from SSL_read
 	    cout << receive_buf;
-	    //finish outputting the file
+	    actualWritten = BIO_write(fileout,receive_buf,
+				      actualRead);
+	    bytesWrote += actualWritten;
+	    //setting buffer to zero
 	    memset(receive_buf,0,sizeof(receive_buf));
+	    //finish outputting the file
 	  }
+	print_errors();
 	printf("\nFILE RECEIVED.\n");
 	printf("Recieved.\n");
 	printf("    (Bytes sent: %d)\n", bytesReceived);
 	printf("Wrote to file: %s\n",filename);
-	printf("    (Bytes wrote %d)\n", bytesWrote);
+	printf("    (Bytes written: %d)\n", bytesWrote);
 	int flush_fileout = BIO_flush(fileout);
 	int free_fileout  = BIO_free(fileout);
 	int free_server_fileout = BIO_flush(client);

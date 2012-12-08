@@ -7,4 +7,4 @@ all: Server/ssl_server.cpp Client/ssl_client.cpp
 	$(COMPILER) $(FLAGS) -o Server/server ./Server/ssl_server.cpp $(LIBRARIES)
 	$(COMPILER) $(FLAGS) -o Client/client ./Client/ssl_client.cpp $(LIBRARIES)
 clean:
-	rm -rf *.o a.out *~ *#
+	rm -rf *.o a.out *~ *# Server/server Client/client Client/*.txt Server/*.o Server/*~ Server/*# Client/*.o Client/*~ Client/*#
