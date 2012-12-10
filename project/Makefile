@@ -1,4 +1,4 @@
-COMPILER	= g++
+COMPILER	= g++ -g
 FLAGS	 	= 
 LIBRARIES	= -l ssl -l crypto
 #CXXFLAGS=-g -W -Wall -Werror -ansi -pedantic

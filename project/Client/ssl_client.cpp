@@ -95,28 +95,62 @@ int main(int argc, char** argv)
   //-------------------------------------------------------------------------
   // 2. Send the server a random number
   printf("2.  Sending challenge to the server...");
-  /*
-  char randomNumber_challenge[129];
+  
+ //SSL_write
+  
+  string random = "31337";
+  string oldrandom="31337";
+  int sent = 0;
+  // /*
+  int rsa_cushion = 12;
+  //size of seedin
+  int rsaSize = 128;
+  int randSize = 128-rsa_cushion;
+  char randomNumber_challenge[117];
   memset(randomNumber_challenge,0,sizeof(randomNumber_challenge));
-  int randSize = 128;
-  int created_random = RAND_bytes( (unsigned char *)randomNumber_challenge, randSize);
-  string randomNumber = randomNumber_challenge;
-  */  
-  string randomNumber="31337";
-  //string randomNumber="31333333";
-  //SSL_write
- int sent = 0;
- { 
-   sent = SSL_write(ssl,(const void*) randomNumber.c_str(),sizeof(randomNumber));
-  BIO_flush(client); 
- }
+  char send_challenge[129];
+  memset(send_challenge,0,sizeof(send_challenge));
+  int rsa_challenge_len = 0;
+  {
+    //setting seed
+    int seed = RAND_load_file("/dev/urandom",randSize);
+    int created_random = RAND_bytes( (unsigned char *)randomNumber_challenge, randSize);
+    //cout <<endl << "RAND BYtes:" << created_random << endl;
+    //cout <<  buff2hex((unsigned char*)randomNumber_challenge,sizeof(randomNumber_challenge));
+    print_errors();
+    oldrandom = buff2hex((unsigned char*)randomNumber_challenge,sizeof(randomNumber_challenge));
+    // */
+    { 
+	//encrypting challenge
+      BIO *rsa_challenge = BIO_new_file("rsapublickey.pem","r");
+      RSA *challenge_enc = PEM_read_bio_RSA_PUBKEY(rsa_challenge,
+						   NULL,
+						   NULL,
+						   NULL);
+      rsa_challenge_len = RSA_public_encrypt(randSize,(unsigned char*)randomNumber_challenge,(unsigned char*)send_challenge,challenge_enc,RSA_PKCS1_PADDING);
+      //cout << endl << "rsa_challenge:" << rsa_challenge_len << endl;
+      if(int(rsa_challenge_len) == int(-1)){
+	cout << "Encrypting challenge failed." << endl;
+	 BIO_flush(client); 
+	 BIO_flush(rsa_challenge);
+	 RSA_free(challenge_enc);
+	 exit(EXIT_FAILURE);
+      }
+      
+      random =  buff2hex((unsigned char*)send_challenge,sizeof(send_challenge));
+      sent = SSL_write(ssl,(const void*) send_challenge,rsa_challenge_len);
+      BIO_flush(client); 
+      BIO_flush(rsa_challenge);
+      RSA_free(challenge_enc);
+    }
+  }
   printf("SUCCESS.\n");
-  printf("    (Challenge sent: \"%s\" (%d bytes)))\n", randomNumber.c_str(),sent);
-  printf("    (Hex value of Challenge sent: \"%s\")\n", buff2hex((const unsigned char*)randomNumber.c_str(),sizeof(randomNumber)).c_str());
+ printf("    (Hex value of Challenge sent: \"%s\")\n", oldrandom.c_str() );
+  printf("    (Hex value of Encrypted Challenge sent: \"%s\")\n", random.c_str() );
   //-------------------------------------------------------------------------
   // 3a. Receive the signed key from the server
   printf("3a. Receiving signed key from server...");
-
+  
   string signature ="FIXME";
   int siglen = 5;
   //SSL_read;
@@ -151,7 +185,7 @@ int main(int argc, char** argv)
     boutfile = BIO_new(BIO_s_mem());
     hash = BIO_new(BIO_f_md());
     BIO_set_md(hash,EVP_sha1());
-    int actualWritten = BIO_write(boutfile,(const void*) randomNumber.c_str(),sizeof(randomNumber));
+    int actualWritten = BIO_write(boutfile,(const void*)  randomNumber_challenge,randSize);
     BIO_push(hash,boutfile);
     char mdbuf[BUFFER_SIZE];
     memset(mdbuf,0,sizeof(mdbuf));
@@ -268,7 +302,7 @@ int main(int argc, char** argv)
 	    //print what was read from SSL_read
 	    //need to decrypt value
 	    //cout << "bytes read:" << actualRead << endl;
-	    int rsa_public_dec_in = RSA_public_decrypt(readAmount,(unsigned char*)receive_buf,(unsigned char*)in_buf,RSAPUB_in,RSA_PKCS1_PADDING);
+	    int rsa_public_dec_in = RSA_public_decrypt(actualRead,(unsigned char*)receive_buf,(unsigned char*)in_buf,RSAPUB_in,RSA_PKCS1_PADDING);
 	    //cout << "RSA PUBLIC DECRYPTED:" << rsa_public_dec_in<< endl;
 	    //cout <<"JUST READ IN" << endl;
 	    print_errors();
@@ -327,7 +361,7 @@ int main(int argc, char** argv)
   //-------------------------------------------------------------------------
   // 6. Close the connection
   printf("6.  Closing the connection...");
-  
+ 
   //SSL_shutdown
   //1 = good
   //0 = problem call it again

@@ -101,19 +101,26 @@ int main(int argc, char** argv)
   printf("2. Waiting for client to connect and send challenge...");
   
   //SSL_read
-  string challenge="";
+  //string challenge="";
   int buff_len = 0;
-  char buff[BUFFER_SIZE];
+  char buff[BUFFER_SIZE+1];
   memset(buff,0,sizeof(buff));
+  char challenge[BUFFER_SIZE+1];
+  memset(challenge,0,sizeof(challenge));
+  int challenge_dec_len = 0;
   {
     buff_len = SSL_read(ssl,buff,BUFFER_SIZE); 
     BIO_flush(server);
-    //challenge = buff;
-    //cout << endl<< buff << endl;
+    //decrypt challenge
+    BIO *rsa_challenge_in = BIO_new_file("rsaprivatekey.pem","r");
+    RSA *RSA_challenge_dec = PEM_read_bio_RSAPrivateKey(rsa_challenge_in,NULL,NULL,NULL);
+    challenge_dec_len = RSA_private_decrypt(buff_len,(unsigned char*)buff,(unsigned char*)challenge,RSA_challenge_dec,RSA_PKCS1_PADDING);
+    print_errors();
   }
   printf("DONE.\n");
-  printf("    (Challenge: \"%s\" (%d bytes))\n", buff,buff_len);
-  printf("    (Hex value of Challenge: \"%s\")\n", buff2hex((const unsigned char*)buff, buff_len).c_str() );
+  //printf("    (Challenge: \"%s\" (%d bytes))\n", buff,buff_len);
+  printf("    (Hex value of Challenge received: \"%s\")\n", buff2hex((const unsigned char*)buff, buff_len).c_str() );
+  printf("    (Hex value of Decrypted Challenge received: \"%s\")\n", buff2hex((const unsigned char*)challenge, challenge_dec_len).c_str() );
   
   //-------------------------------------------------------------------------
   // 3. Generate the SHA1 hash of the challenge
@@ -135,7 +142,7 @@ int main(int argc, char** argv)
    boutfile = BIO_new(BIO_s_mem());
    hash = BIO_new(BIO_f_md());
    BIO_set_md(hash,EVP_sha1());
-   int actualWritten = BIO_write(boutfile,buff,buff_len);  
+   int actualWritten = BIO_write(boutfile,challenge,challenge_dec_len);  
    //BIO_push(hash,boutfile); 
    boutfile =  BIO_push(hash,boutfile); 
    mdlen = BIO_read(hash,mdbuf,BUFFER_SIZE);
@@ -293,7 +300,7 @@ int main(int argc, char** argv)
 	  //cout << send_buf;
 	  ///*
 	  //int rsa_private_enc = RSA_private_encrypt(readAmount,(unsigned char*)send_buf,(unsigned char*)out_buf,RSAPRIV_out,RSA_PKCS1_PADDING);
-	  int rsa_private_enc = RSA_private_encrypt(readAmount,(unsigned char*)send_buf,(unsigned char*)out_buf,RSAPRIV_out,RSA_PKCS1_PADDING);
+	  int rsa_private_enc = RSA_private_encrypt(actualRead,(unsigned char*)send_buf,(unsigned char*)out_buf,RSAPRIV_out,RSA_PKCS1_PADDING);
 	  //  cout << "RSA PRIVATE ENCRYPTED:" << rsa_private_enc << endl; 
 	  
 	  //cout << out_buf << endl;
