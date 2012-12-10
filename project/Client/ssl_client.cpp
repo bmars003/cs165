@@ -175,6 +175,7 @@ int main(int argc, char** argv)
    decrypted_key = buff2hex((const unsigned char*) rsa_dec_buff,rsa_public_dec);
    decrypted_length = rsa_public_dec;
    int rsa_public_flush = BIO_flush(rsa_public);
+   RSA_free(RSAPUB);
  }
   
   printf("AUTHENTICATED\n");
@@ -248,9 +249,9 @@ int main(int argc, char** argv)
 	int flush_server = BIO_flush(client);
 	int bytesReceived = 0;
 	int bytesWrote = 0;
-	char receive_buf[128];
+	char receive_buf[129];
 	memset(receive_buf,0,sizeof(receive_buf));
-	char in_buf[128];
+	char in_buf[129];
 	memset(in_buf,0,sizeof(in_buf));
 	RSA *RSAPUB_in = PEM_read_bio_RSA_PUBKEY(rsa_public_in,
 						 NULL,
@@ -275,9 +276,12 @@ int main(int argc, char** argv)
 	    //cout << "before decrypted:" << endl;
 	    //cout << receive_buf;
 	    //cout << endl<< "decrypted:" << endl;
-	    cout << in_buf;
+	    
+	    //actualWritten = BIO_write(fileout,in_buf,
+	    //			      rsa_public_dec_in);
 	    actualWritten = BIO_write(fileout,in_buf,
-				      actualRead);
+				      rsa_public_dec_in);
+	    cout << in_buf;
 	    //actualWritten = BIO_write(fileout,receive_buf,
 	    //			      actualRead);
 	    bytesWrote += actualWritten;
@@ -295,6 +299,7 @@ int main(int argc, char** argv)
 	int flush_fileout = BIO_flush(fileout);
 	int free_fileout  = BIO_free(fileout);
 	int free_server_fileout = BIO_flush(client);
+	RSA_free(RSAPUB_in);
       }
     }
     else if(string(check_buff) == "fnf"){

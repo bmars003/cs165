@@ -160,9 +160,10 @@ int main(int argc, char** argv)
   
   int siglen=0;
   string signature = "FIXME"; 
-  BIO *rsa_private;
-  RSA * RSAPRIV;
   {
+    BIO *rsa_private;
+    RSA * RSAPRIV;
+  
     char rsa_enc_buff[BUFFER_SIZE];
     memset(rsa_enc_buff,0,sizeof(rsa_enc_buff));
     rsa_private = BIO_new_file("rsaprivatekey.pem","r");
@@ -172,6 +173,7 @@ int main(int argc, char** argv)
     signature = rsa_enc_buff;
     int flush_rsa = BIO_flush(rsa_private);
     BIO_free(rsa_private);
+    RSA_free(RSAPRIV);
     print_errors();
   }
   printf("DONE.\n");
@@ -270,9 +272,9 @@ int main(int argc, char** argv)
     }
     //writing contents of requested file to client
     {
-      char send_buf[64];
+      char send_buf[65];
       memset(send_buf,0,sizeof(send_buf));
-      char out_buf[64];
+      char out_buf[65];
       memset(out_buf,0,sizeof(out_buf));
       BIO *rsa_private_out;
       rsa_private_out = BIO_new_file("rsaprivatekey.pem","r");
@@ -304,6 +306,7 @@ int main(int argc, char** argv)
 	  memset(out_buf,0,sizeof(out_buf));
 	}
     BIO_flush(rsa_private_out);
+    RSA_free(RSAPRIV_out);
     }
     int flush_fileout = BIO_flush(fileout);
     int free_fileout  = BIO_free(fileout);
