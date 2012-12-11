@@ -1,3 +1,16 @@
+/**
+ * Course: CS 165 Fall 2012
+ * Username:marshb/bmars003
+ * Email address: bmars003@ucr.edu 
+ *
+ * Assignment: Project
+ * Filename : util.h
+ *
+ * We hereby certify that the contents of this file represent
+ * our team's original work. Any outside code has been approved
+ * for use by the instructor or TA. In such cases an explicit
+ * reference to the source of said code is included.
+ */
 // Macro definitions
 #define BUFFER_SIZE 1024
 #define RSA_MAX 256

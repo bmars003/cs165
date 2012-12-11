@@ -1,0 +1,57 @@
+/**
+ * Course: CS 165 Fall 2012
+ * Username:marshb/bmars003
+ * Email address: bmars003@ucr.edu 
+ *
+ * Assignment: Project
+ * Filename : README.txt
+ *
+ * We hereby certify that the contents of this file represent
+ * our team's original work. Any outside code has been approved
+ * for use by the instructor or TA. In such cases an explicit
+ * reference to the source of said code is included.
+ */
+Use  the Makefile provided:
+1) How to use:
+   - make : This compiles ssl_server.cpp and ssl_client.cpp and creates the corresponding executable within the Client and Server folder.
+   - make clean with clean out all text file with in the Client folder and with get rid of all ~, #, .o and all executables
+
+  
+
+2) Errors:
+
+Client:
+Error_decrypt(1):
+
+3b. Authenticating key...*** error:0407006A:rsa			routines:RSA_padding_check_PKCS1_type_1:block type is not 01
+*** error:04067072:rsa routines:RSA_EAY_PUBLIC_DECRYPT:padding check failed
+Segmentation fault
+
+This has been checked by the following error check from the server:
+
+"Problem decrypting the signature from server.
+Please restart Client.
+If this error persists through multiple tries PLEASE wait a minute then re-run client.
+"
+Please re-run the client and the server and the error should go away.
+NOTE: That this error occurs more often when running the client over and over again. Its recommended that when rerunning to try a different port or wait a bit before trying again.
+
+No other errors are known at this time.
+
+Server:
+Error_fnf(1):
+
+When Client experiences Error_decrypt(1), the server will display this message:
+"Not able to open file
+Associatiating error with file not found (fnf).
+*** error:02001002:system library:fopen:No such file or directory
+*** error:2006D080:BIO routines:BIO_new_file:no such file
+"
+No other errors are known at this time.
+
+3)NOTE
+Note that this program has been tested on a Mac using SnowLeopard 10.6.8 64-bit intel architecture. It has been tested to work to work on the UCR computer lab machines. If an error occurs and are unable to run it please do not hesitate and try to contact me.
+
+Also not that this program does not has the challenge number using SHA1. But the TA said that is is ok.
+
+Also I would like to note that the Makefile,util.h ,ssl_client.cpp and ssl_server.cpp were all given within the project_base.tar.gz and I had modified where I saw fit and make it so it works. I do not take credit for what was done for me, just what I did to make it work and fulfill the assignment/project.

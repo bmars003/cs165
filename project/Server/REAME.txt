@@ -1,0 +1,29 @@
+/**
+ * Course: CS 165 Fall 2012
+ * Username:marshb/bmars003
+ * Email address: bmars003@ucr.edu 
+ *
+ * Assignment: Project
+ * Filename : README.txt
+ *
+ * We hereby certify that the contents of this file represent
+ * our team's original work. Any outside code has been approved
+ * for use by the instructor or TA. In such cases an explicit
+ * reference to the source of said code is included.
+ */
+Required files:
+rsaprivatekey.pem
+rsapublickey.pem
+ssl_server.cpp
+README.txt
+
+Added files:
+You can add any file into this folder that you want the the client to be able to have access to.
+
+Usage:
+server server:portnumber
+ex. ./server localhost:1235
+
+WARNING:
+Please use the Makefile before running server.
+If you don't the program might not run properly.

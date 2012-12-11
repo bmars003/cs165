@@ -1,3 +1,16 @@
+/**
+ * Course: CS 165 Fall 2012
+ * Username:marshb/bmars003
+ * Email address: bmars003@ucr.edu 
+ *
+ * Assignment: Project
+ * Filename : ssl_client.cpp
+ *
+ * We hereby certify that the contents of this file represent
+ * our team's original work. Any outside code has been approved
+ * for use by the instructor or TA. In such cases an explicit
+ * reference to the source of said code is included.
+ */
 //----------------------------------------------------------------------------
 // File: ssl_client.cpp
 // Description: Implementation of an SSL-secured client that performs
@@ -40,7 +53,7 @@ int main(int argc, char** argv)
   // Useage: client server:port filename
   if (argc < 3)
     {
-      printf("Useage: client -server serveraddress -port portnumber filename\n");
+      printf("Useage: client serveraddress:portnumber RequestingFile\n");
       exit(EXIT_FAILURE);
     }
   char* server = argv[1];
@@ -101,39 +114,42 @@ int main(int argc, char** argv)
   string random = "31337";
   string oldrandom="31337";
   int sent = 0;
-  // /*
   int rsa_cushion = 12;
   //size of seedin
   int rsaSize = 128;
+  //size of what should be read in
   int randSize = 128-rsa_cushion;
+  //buffer that has the random number
   char randomNumber_challenge[117];
   memset(randomNumber_challenge,0,sizeof(randomNumber_challenge));
+  // buffer that has th encrypted challenge
   char send_challenge[129];
   memset(send_challenge,0,sizeof(send_challenge));
+  //hold the length of the number of bytes encrypted by RSA
   int rsa_challenge_len = 0;
   {
     //setting seed
     int seed = RAND_load_file("/dev/urandom",randSize);
     int created_random = RAND_bytes( (unsigned char *)randomNumber_challenge, randSize);
-    //cout <<endl << "RAND BYtes:" << created_random << endl;
-    //cout <<  buff2hex((unsigned char*)randomNumber_challenge,sizeof(randomNumber_challenge));
     print_errors();
     oldrandom = buff2hex((unsigned char*)randomNumber_challenge,sizeof(randomNumber_challenge));
-    // */
     { 
-	//encrypting challenge
+      //encrypting challenge
       BIO *rsa_challenge = BIO_new_file("rsapublickey.pem","r");
       RSA *challenge_enc = PEM_read_bio_RSA_PUBKEY(rsa_challenge,
 						   NULL,
 						   NULL,
 						   NULL);
       rsa_challenge_len = RSA_public_encrypt(randSize,(unsigned char*)randomNumber_challenge,(unsigned char*)send_challenge,challenge_enc,RSA_PKCS1_PADDING);
-      //cout << endl << "rsa_challenge:" << rsa_challenge_len << endl;
+      //check to see if RSA failed if so exit and clean up
       if(int(rsa_challenge_len) == int(-1)){
 	cout << "Encrypting challenge failed." << endl;
 	 BIO_flush(client); 
 	 BIO_flush(rsa_challenge);
 	 RSA_free(challenge_enc);
+	 SSL_shutdown(ssl);
+	 SSL_CTX_free(ctx);
+	 SSL_free(ssl);
 	 exit(EXIT_FAILURE);
       }
       
@@ -198,6 +214,7 @@ int main(int argc, char** argv)
   }
   
   {
+    PAUSE(3);
     BIO  *rsa_public;
     RSA *RSAPUB;
     //decrypting signature given
@@ -205,6 +222,21 @@ int main(int argc, char** argv)
    rsa_public = BIO_new_file("rsapublickey.pem","r");
    RSAPUB = PEM_read_bio_RSA_PUBKEY(rsa_public,NULL,NULL,NULL);
    int rsa_public_dec = RSA_public_decrypt(siglen,(unsigned char*)signature.c_str(),(unsigned char*)rsa_dec_buff,RSAPUB,RSA_PKCS1_PADDING);
+   //checks to see if RSA decrypt worked
+   if(int(rsa_public_dec) == int(-1))
+     {
+       printf("\nProblem decrypting the signature from server.\n");
+       printf("Please restart Client.\n");
+       printf("If this error persists through multiple tries ");
+       printf("PLEASE wait a minute then re-run client.\n");
+       int rsa_public_flush = BIO_flush(rsa_public);
+	RSA_free(RSAPUB);
+	SSL_shutdown(ssl);
+	SSL_CTX_free(ctx);
+	SSL_free(ssl);
+	exit(EXIT_FAILURE);
+     }
+   
    print_errors();
    decrypted_key = buff2hex((const unsigned char*) rsa_dec_buff,rsa_public_dec);
    decrypted_length = rsa_public_dec;
@@ -215,19 +247,25 @@ int main(int argc, char** argv)
   printf("AUTHENTICATED\n");
   printf("    (Generated key(SHA1 hash): %s\" (%d bytes))\n", generated_key.c_str(),generated_length);
   printf("    (Decrypted key(SHA1 hash): %s\" (%d bytes))\n", decrypted_key.c_str(),decrypted_length);
-  if(generated_key != decrypted_key){
-    cerr << "Generated key is not the same as the Decrypted key." 
-	 << endl
-	 << "Authentication failure between client and server."
-	 << endl << "Exiting with error code -1";
-    exit(-1);
-  }
-  else
+  //checking to see if the authentication is a succes
+  if(generated_key != decrypted_key)
+    {
+      cerr << "Generated key is not the same as the Decrypted key." 
+	   << endl
+	   << "Authentication failure between client and server."
+	   << endl << "Exiting with error code " << EXIT_FAILURE 
+	   << endl;
+      SSL_shutdown(ssl);
+      SSL_CTX_free(ctx);
+      SSL_free(ssl);
+      exit(EXIT_FAILURE);
+    }
+  else{
     cout << "Genratred key matches Decrypted key." 
 	 << endl
 	 << "Authentication is a success proceeding with further "
 	 << "request(s)." << endl;
-
+  }
   //-------------------------------------------------------------------------
   // 4. Send the server a file request
   printf("4.  Sending file request to server...");
@@ -239,21 +277,17 @@ int main(int argc, char** argv)
   
   //BIO_flush in part 3b so not needed here
   int file_request = 0;
-  //int file_request = SSL_write(ssl,(const void*)filename,sizeof(filename)+1);
   BIO *request;
   request = BIO_new(BIO_s_mem());
   char filename_to_send[BUFFER_SIZE];
   memset(filename_to_send,0,sizeof(filename_to_send));
   int puts = BIO_puts(request,(const char*)filename);
   int pushed_to_request = BIO_read(request,filename_to_send,puts);
-  //cout << "?" <<filename_to_send <<"?"<< endl;
   file_request = SSL_write(ssl,(const void*) filename_to_send,
 			   pushed_to_request);
-  //flush BIO request
   int flush_request = BIO_flush(request);
-  
   print_errors();
-  printf("SENT.\n");
+  printf("File request SENT to server.\n");
   printf("    (File requested: \"%s\" (%d bytes))\n", 
 	 filename,file_request);
   
@@ -265,6 +299,7 @@ int main(int argc, char** argv)
   //SSL_read
   //BIO_write
   //BIO_free
+  
   //checking to see if server has any problems with opening 
   //requested file
   {
@@ -272,77 +307,68 @@ int main(int argc, char** argv)
     memset(check_buff,0,sizeof(check_buff));
     int check_error_received = SSL_read(ssl,check_buff,
 					sizeof(check_buff));
-    if(string(check_buff) == "OK"){
-      cout << endl 
-	   <<"Server is able to process file request" << endl;
-      //getting data from server
+    if(string(check_buff) == "OK")
       {
-	BIO *fileout, *rsa_public_in;
-	fileout = BIO_new_file(filename,"w");
-	rsa_public_in = BIO_new_file("rsapublickey.pem","r");
-	int flush_server = BIO_flush(client);
-	int bytesReceived = 0;
-	int bytesWrote = 0;
-	char receive_buf[129];
-	memset(receive_buf,0,sizeof(receive_buf));
-	char in_buf[129];
-	memset(in_buf,0,sizeof(in_buf));
-	RSA *RSAPUB_in = PEM_read_bio_RSA_PUBKEY(rsa_public_in,
-						 NULL,
-						 NULL,
-						 NULL);
-	//int readAmount = 1023;
-	int readAmount = 128;
-	int actualRead = 0;
-	int actualWritten = 0;
-	cout << endl;
-	while((actualRead = SSL_read(ssl,receive_buf,readAmount)) >1)
-	  {
-	    bytesReceived += actualRead;
-	    //print what was read from SSL_read
-	    //need to decrypt value
-	    //cout << "bytes read:" << actualRead << endl;
-	    int rsa_public_dec_in = RSA_public_decrypt(actualRead,(unsigned char*)receive_buf,(unsigned char*)in_buf,RSAPUB_in,RSA_PKCS1_PADDING);
-	    //cout << "RSA PUBLIC DECRYPTED:" << rsa_public_dec_in<< endl;
-	    //cout <<"JUST READ IN" << endl;
-	    print_errors();
-	    //cout <<"END of ERROR" << endl;
-	    //cout << "before decrypted:" << endl;
-	    //cout << receive_buf;
-	    //cout << endl<< "decrypted:" << endl;
-	    
-	    //actualWritten = BIO_write(fileout,in_buf,
-	    //			      rsa_public_dec_in);
-	    actualWritten = BIO_write(fileout,in_buf,
+	cout << endl 
+	     <<"Server is able to process file request" << endl
+	     << "Contets of File:" << endl;
+	
+	//getting data from server
+	{
+	  BIO *fileout, *rsa_public_in;
+	  fileout = BIO_new_file(filename,"w");
+	  rsa_public_in = BIO_new_file("rsapublickey.pem","r");
+	  int flush_server = BIO_flush(client);
+	  int bytesReceived = 0;
+	  int bytesWrote = 0;
+	  char receive_buf[129];
+	  memset(receive_buf,0,sizeof(receive_buf));
+	  char in_buf[129];
+	  memset(in_buf,0,sizeof(in_buf));
+	  RSA *RSAPUB_in = PEM_read_bio_RSA_PUBKEY(rsa_public_in,
+						   NULL,
+						   NULL,
+						   NULL);
+	  //int readAmount = 1023;
+	  int readAmount = 128;
+	  int actualRead = 0;
+	  int actualWritten = 0;
+	  while((actualRead = SSL_read(ssl,receive_buf,readAmount)) >=1)
+	    {
+	      bytesReceived += actualRead;
+	      //print what was read from SSL_read
+	      //need to decrypt value
+	      int rsa_public_dec_in = RSA_public_decrypt(actualRead,(unsigned char*)receive_buf,(unsigned char*)in_buf,RSAPUB_in,RSA_PKCS1_PADDING);
+	      print_errors();
+	      actualWritten = BIO_write(fileout,in_buf,
 				      rsa_public_dec_in);
-	    cout << in_buf;
-	    //actualWritten = BIO_write(fileout,receive_buf,
-	    //			      actualRead);
-	    bytesWrote += actualWritten;
-	    //setting buffer to zero
-	    memset(receive_buf,0,sizeof(receive_buf));
-	    memset(in_buf,0,sizeof(in_buf));
-	    //finish outputting the file
-	  }
-	print_errors();
-	printf("\nFILE RECEIVED.\n");
-	printf("Recieved.\n");
-	printf("    (Bytes sent: %d)\n", bytesReceived);
-	printf("Wrote to file: %s\n",filename);
-	printf("    (Bytes written: %d)\n", bytesWrote);
-	int flush_fileout = BIO_flush(fileout);
-	int free_fileout  = BIO_free(fileout);
-	int free_server_fileout = BIO_flush(client);
-	RSA_free(RSAPUB_in);
+	      cout << in_buf;
+	      bytesWrote += actualWritten;
+	      //setting buffers to zero
+	      memset(receive_buf,0,sizeof(receive_buf));
+	      memset(in_buf,0,sizeof(in_buf));
+	      //finish outputting the file
+	      
+	    }
+	  cout << endl <<"End of file contents" << endl;
+	  print_errors();
+	  printf("\nFILE RECEIVED.\n");
+	  printf("Recieved.\n");
+	  printf("    (Bytes received: %d)\n", bytesReceived);
+	  printf("Wrote to file: %s\n",filename);
+	  printf("    (Bytes written: %d)\n", bytesWrote);
+	  int flush_fileout = BIO_flush(fileout);
+	  int free_fileout  = BIO_free(fileout);
+	  int free_server_fileout = BIO_flush(client);
+	  RSA_free(RSAPUB_in);
+	}
       }
-    }
     else if(string(check_buff) == "fnf"){
       cout << endl 
 	   << "Server is having a problem sending " << filename 
 	   << "." << endl
 	   << "Associating error as file not found (fnf)." << endl;
-      //proceeding with getting data from 
-      
+      printf("FILE NOT RECEIVED.\n");
     }
     else
       {
@@ -352,8 +378,10 @@ int main(int argc, char** argv)
 	     << "Exiting program to prevent any loss of data"
 	     << " with error -1."
 	     << endl;
-	exit(-1);
-	printf("FILE NOT RECEIVED.\n");
+	SSL_shutdown(ssl);
+	SSL_CTX_free(ctx);
+	SSL_free(ssl);
+	exit(EXIT_FAILURE);
       }
   }
   
@@ -366,16 +394,27 @@ int main(int argc, char** argv)
   //1 = good
   //0 = problem call it again
   //-1 = error
-  int server_shutdown = SSL_shutdown(ssl);
+  int client_shutdown = SSL_shutdown(ssl);
+  if( client_shutdown == 1){
+    printf("\nClient Shutdown Properly.\n");
+  }
+  else if(client_shutdown == 0){
+    printf("\nClient had trouble shutting down.\n");
+    printf("Attempting to shutdown again.\n");
+  }
+  else
+    {
+      printf("\nAn error occured when trying to shutdown.\n");
+    }
   print_errors();
   printf("DONE.\n");
-  
   printf("\n\nALL TASKS COMPLETED SUCCESSFULLY.\n");
   
   //-------------------------------------------------------------------------
+  printf("Cleaning up server.\n");
   // Freedom!
   SSL_CTX_free(ctx);
   SSL_free(ssl);
+  printf("Cleaning is finished.\n");
   return EXIT_SUCCESS;
-  // go back and finish error checking and possible buffer overflows.
 }

@@ -1,3 +1,16 @@
+/**
+ * Course: CS 165 Fall 2012
+ * Username:marshb/bmars003
+ * Email address: bmars003@ucr.edu 
+ *
+ * Assignment: Project
+ * Filename : ssl_server.cpp
+ *
+ * We hereby certify that the contents of this file represent
+ * our team's original work. Any outside code has been approved
+ * for use by the instructor or TA. In such cases an explicit
+ * reference to the source of said code is included.
+ */
 //----------------------------------------------------------------------------
 // File: ssl_server.cpp
 // Description: Implementation of an SSL-secured server that performs
@@ -35,7 +48,7 @@ int main(int argc, char** argv)
   // Useage: client -server serveraddress -port portnumber filename
   if (argc < 2)
     {
-      printf("Useage: server:portnumber\n");
+      printf("Useage: server server:portnumber\n");
       exit(EXIT_FAILURE);
     }
   char* port = argv[1];
@@ -118,7 +131,6 @@ int main(int argc, char** argv)
     print_errors();
   }
   printf("DONE.\n");
-  //printf("    (Challenge: \"%s\" (%d bytes))\n", buff,buff_len);
   printf("    (Hex value of Challenge received: \"%s\")\n", buff2hex((const unsigned char*)buff, buff_len).c_str() );
   printf("    (Hex value of Decrypted Challenge received: \"%s\")\n", buff2hex((const unsigned char*)challenge, challenge_dec_len).c_str() );
   
@@ -191,37 +203,10 @@ int main(int argc, char** argv)
   // 5. Send the signature to the client for authentication
   printf("5. Sending signature to client for authentication...");
  
-//BIO_flush
-  //int flush_bout = BIO_flush(boutfile);
-  //int flush_hash = BIO_flush(hash);
-  //int flush_rsa = BIO_flush(rsa_private);
+  //BIO_flush
   //SSL_write
   int sent_signiture = SSL_write(ssl,(const void*) signature.c_str(),siglen);
   BIO_flush(server);
-  // cout << endl << "SENT(sig to client)<"<<sent_signiture <<">" <<endl;
-  
-    /*  
-  //checking signature on server side an seeing if I can decrypt
-  {  
-    cout << "CHECKING signature on server side to see if it can"
-	 << " decrypted" << endl;
-    BIO *rsa_public;
-    RSA *RSAPUB;
-    char rsa_dec_buff[BUFFER_SIZE];
-    rsa_public = BIO_new_file("rsapublickey.pem","r");
-    RSAPUB = PEM_read_bio_RSA_PUBKEY(rsa_public,NULL,NULL,NULL);
-    int rsa_public_dec = RSA_public_decrypt(siglen,(unsigned char*)signature,(unsigned char*)rsa_dec_buff,RSAPUB,RSA_PKCS1_PADDING);
-     print_errors();
-    cout << endl;
-    printf("    (Decrypted key length: %d bytes)\n", rsa_public_dec);
-    printf("    (Decrypted key: \"%s\" (%d bytes))\n", buff2hex((const unsigned char*)rsa_dec_buff, rsa_public_dec).c_str(), rsa_public_dec);
-    flush_bout = BIO_flush(boutfile);
-    flush_hash = BIO_flush(hash);
-    flush_rsa = BIO_flush(rsa_private);
-    int flush_rsa_dec = BIO_flush(rsa_public);
-  }
-  */
-
   printf("DONE.\n");
   
   //-------------------------------------------------------------------------
@@ -267,63 +252,58 @@ int main(int argc, char** argv)
 	       << endl;
 	  error = "fnf";
 	  error_len = SSL_write(ssl,error.c_str(),sizeof(error)+1);
+	  int flush_server = BIO_flush(server);
+	  printf("File not sent.\n");
 	}
       else
 	{
 	cout << endl 
-	     << file << " was found proceeding with sending file" 
+	     << file << " was found, proceeding with sending file" 
 	     << endl;
 	error_len = SSL_write(ssl,error.c_str(),sizeof(error)+1);
-	}
-      int flush_server = BIO_flush(server);
-    }
-    //writing contents of requested file to client
-    {
-      char send_buf[65];
-      memset(send_buf,0,sizeof(send_buf));
-      char out_buf[65];
-      memset(out_buf,0,sizeof(out_buf));
-      BIO *rsa_private_out;
-      rsa_private_out = BIO_new_file("rsaprivatekey.pem","r");
-      RSA *RSAPRIV_out;
-      RSAPRIV_out = PEM_read_bio_RSAPrivateKey(rsa_private_out,
-					       NULL,
-					       NULL,
-					       NULL);
-      //int readAmount = 1023;
-      int readAmount = 64;
-      int actualRead = 0;
-      int actualWritten = 0;
-      
-      while((actualRead = BIO_read(fileout,send_buf,readAmount))>1)
-	{
-	  //cout << send_buf;
-	  ///*
-	  //int rsa_private_enc = RSA_private_encrypt(readAmount,(unsigned char*)send_buf,(unsigned char*)out_buf,RSAPRIV_out,RSA_PKCS1_PADDING);
-	  int rsa_private_enc = RSA_private_encrypt(actualRead,(unsigned char*)send_buf,(unsigned char*)out_buf,RSAPRIV_out,RSA_PKCS1_PADDING);
-	  //  cout << "RSA PRIVATE ENCRYPTED:" << rsa_private_enc << endl; 
-	  
-	  //cout << out_buf << endl;
-	  //*/
-	  // need to encrypt
-	  //actualWritten = SSL_write(ssl,send_buf,actualRead);
-	  actualWritten = SSL_write(ssl,out_buf,rsa_private_enc);
-	  bytesSent += actualWritten;
-	  memset(send_buf,0,sizeof(send_buf));
-	  memset(out_buf,0,sizeof(out_buf));
-	}
-    BIO_flush(rsa_private_out);
-    RSA_free(RSAPRIV_out);
-    }
-    int flush_fileout = BIO_flush(fileout);
-    int free_fileout  = BIO_free(fileout);
-    int free_server_fileout = BIO_flush(server);
+	int flush_server = BIO_flush(server);
+	
     
+	//writing contents of requested file to client
+	{
+	  char send_buf[65];
+	  memset(send_buf,0,sizeof(send_buf));
+	  char out_buf[65];
+	  memset(out_buf,0,sizeof(out_buf));
+	  BIO *rsa_private_out;
+	  rsa_private_out = BIO_new_file("rsaprivatekey.pem","r");
+	  RSA *RSAPRIV_out;
+	  RSAPRIV_out = PEM_read_bio_RSAPrivateKey(rsa_private_out,
+						   NULL,
+						   NULL,
+						   NULL);
+	  //int readAmount = 1023;
+	  int readAmount = 64;
+	  int actualRead = 0;
+	  int actualWritten = 0;
+	  
+	  while((actualRead = BIO_read(fileout,send_buf,readAmount))>=1)
+	    {
+	      int rsa_private_enc = RSA_private_encrypt(actualRead,(unsigned char*)send_buf,(unsigned char*)out_buf,RSAPRIV_out,RSA_PKCS1_PADDING);
+	      
+	      actualWritten = SSL_write(ssl,out_buf,rsa_private_enc);
+	      bytesSent += actualWritten;
+	      memset(send_buf,0,sizeof(send_buf));
+	      memset(out_buf,0,sizeof(out_buf));
+	    }
+	  BIO_flush(rsa_private_out);
+	  RSA_free(RSAPRIV_out);
+	   printf("SENT.\n");
+	   printf("    (Bytes sent: %d)\n", bytesSent);
+	}
+	int flush_fileout = BIO_flush(fileout);
+	int free_fileout  = BIO_free(fileout);
+	int free_server_fileout = BIO_flush(server);
+	}
+    }
   }
- 
   print_errors();
-  printf("SENT.\n");
-  printf("    (Bytes sent: %d)\n", bytesSent);
+  cout << "Proceeding to shutdown." << endl;
   
   //-------------------------------------------------------------------------
   // 8. Close the connection
@@ -335,6 +315,18 @@ int main(int argc, char** argv)
   //0 = problem call it again
   //-1 = error
   int server_shutdown = SSL_shutdown(ssl);
+  
+  if( server_shutdown == 1){
+    printf("\nServer Shutdown Properly.\n");
+  }
+  else if(server_shutdown == 0){
+    printf("\nServer had trouble shutting down.\n");
+    printf("Attempting to shutdown again.\n");
+  }
+  else
+    {
+      printf("\nAn error occured when trying to shutdown.\n");
+    }
   int bio_server_reset = BIO_reset(server);
   print_errors();
   printf("DONE.\n");
